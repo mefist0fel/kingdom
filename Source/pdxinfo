@@ -1,0 +1,7 @@
+name=Kingdom
+author=Mefistofel
+description=Minimalistic strategy game for playdate.
+bundleID=com.mef.kingdom
+version=0.1
+buildNumber=1
+imagePath=SystemAssets
