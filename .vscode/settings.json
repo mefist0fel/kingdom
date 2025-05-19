@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "pd_api.h": "c",
+        "stdlib.h": "c",
+        "pd_api_network.h": "c"
+    }
+}
