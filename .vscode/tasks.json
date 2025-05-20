@@ -217,6 +217,25 @@
           "isDefault": false
         },
       },
+      
+
+      ///
+      ///
+      ///
+      ///   Archive and run
+      ///
+      ///
+
+      {
+        "label": "Archive and run",
+        "type": "shell",
+        "command": "${workspaceFolder}/archive-and-run.bat",
+        "group": {
+          "kind": "build",
+          "isDefault": true
+        },
+        "problemMatcher": []
+      },
     ]
   }
 

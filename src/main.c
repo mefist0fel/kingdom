@@ -45,6 +45,7 @@ int x = (400-TEXT_WIDTH)/2;
 int y = (240-TEXT_HEIGHT)/2;
 int dx = 1;
 int dy = 2;
+PDButtons current, pushed, released;
 
 static int update(void* userdata)
 {
@@ -53,15 +54,30 @@ static int update(void* userdata)
 	pd->graphics->clear(kColorWhite);
 	pd->graphics->setFont(font);
 	pd->graphics->drawText("Hello World!", strlen("Hello World!"), kASCIIEncoding, x, y);
+	
+	pd->system->getButtonState(&current, &pushed, &released);
 
-	x += dx;
-	y += dy;
+	if (pushed & kButtonA) {
+	}
+
+	if (current & kButtonLeft) {
+		x += dx;
+	}
+
+	if (current & kButtonRight) {
+		x -= dx;
+	}
+
+	if (released & kButtonB) {
+		// кнопка B отпущена
+	}
+	// y += dy;
 	
-	if ( x < 0 || x > LCD_COLUMNS - TEXT_WIDTH )
-		dx = -dx;
+	// if ( x < 0 || x > LCD_COLUMNS - TEXT_WIDTH )
+	// 	dx = -dx;
 	
-	if ( y < 0 || y > LCD_ROWS - TEXT_HEIGHT )
-		dy = -dy;
+	// if ( y < 0 || y > LCD_ROWS - TEXT_HEIGHT )
+	// 	dy = -dy;
         
 	pd->system->drawFPS(0,0);
 
