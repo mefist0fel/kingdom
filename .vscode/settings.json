@@ -2,6 +2,12 @@
     "files.associations": {
         "pd_api.h": "c",
         "stdlib.h": "c",
-        "pd_api_network.h": "c"
+        "pd_api_network.h": "c",
+        "state.h": "c",
+        "menu_state.h": "c",
+        "pd_api_sprite.h": "c",
+        "pd_api_sys.h": "c",
+        "pd_api_json.h": "c",
+        "pd_api_gfx.h": "c"
     }
 }

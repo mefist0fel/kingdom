@@ -1,6 +1,12 @@
 cmake_minimum_required(VERSION 3.14)
 set(CMAKE_C_STANDARD 11)
 
+set(SOURCES
+    src/main.c
+    src/menu_state.c
+    src/game_state.c
+)
+
 set(ENVSDK $ENV{PLAYDATE_SDK_PATH})
 
 if (NOT ${ENVSDK} STREQUAL "")
@@ -31,9 +37,9 @@ set(PLAYDATE_GAME_DEVICE kingdom_DEVICE)
 project(${PLAYDATE_GAME_NAME} C ASM)
 
 if (TOOLCHAIN STREQUAL "armgcc")
-	add_executable(${PLAYDATE_GAME_DEVICE} src/main.c)
+	add_executable(${PLAYDATE_GAME_DEVICE} ${SOURCES})
 else()
-	add_library(${PLAYDATE_GAME_NAME} SHARED src/main.c )
+	add_library(${PLAYDATE_GAME_NAME} SHARED ${SOURCES})
 endif()
 
 include(${SDK}/C_API/buildsupport/playdate_game.cmake)
