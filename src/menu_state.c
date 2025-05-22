@@ -33,7 +33,7 @@ static void MenuUpdateTyped(MenuData* m) {
     for (int i = 0; i < 3; ++i) {
         int y = 100 + i * 20;
         if (i == m->selected)
-            pd->graphics->fillRect(240, y - 2, 160, 16, kColorBlack);
+            pd->graphics->fillRect(230, y, 16, 16, kColorBlack);
         pd->graphics->drawText(m->items[i], strlen(m->items[i]), kASCIIEncoding, 250, y);
     }
 }
