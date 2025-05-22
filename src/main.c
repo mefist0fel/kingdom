@@ -3,6 +3,7 @@
 
 #include "pd_api.h"
 #include "state.h"
+#include "assets.h"
 
 #ifdef _WINDLL
 __declspec(dllexport)
@@ -12,8 +13,6 @@ extern void CreateMenuState();
 
 PlaydateAPI* pd = NULL;
 static State currentState;
-
-const char* fontpath = "/System/Fonts/Asheville-Sans-14-Bold.pft";
 
 void switchState(
     void* data,
@@ -45,7 +44,7 @@ void initializeGame(PlaydateAPI* playdate) {
     pd = playdate;
     pd->graphics->setBackgroundColor(kColorWhite);
     const char* err;
-    pd->graphics->setFont(pd->graphics->loadFont(fontpath, &err));
+    pd->graphics->setFont(pd->graphics->loadFont(FONT_PATH, &err));
     CreateMenuState();
     pd->system->setUpdateCallback(update, NULL);
 }

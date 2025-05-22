@@ -1,5 +1,6 @@
 #include "pd_api.h"
 #include "state.h"
+#include "assets.h"
 
 #ifdef _WINDLL
 __declspec(dllexport)
@@ -10,7 +11,7 @@ extern void CreateGameState();
 typedef struct {
     LCDFont* font;
     int selected;
-    const char* items[2];
+    const char* items[3];
     LCDBitmap* background;
 } MenuData;
 
@@ -18,8 +19,10 @@ static void MenuUpdateTyped(MenuData* m) {
     PDButtons pushed;
     pd->system->getButtonState(NULL, &pushed, NULL);
 
-    if (pushed & kButtonDown || pushed & kButtonUp)
-        m->selected = (m->selected + 1) % 2;
+    if (pushed & kButtonDown && m->selected < 2)
+        m->selected += 1;
+    if (pushed & kButtonUp && m->selected > 0)
+        m->selected -= 1;
 
     if (pushed & kButtonA && m->selected == 0) {
         CreateGameState();
@@ -27,16 +30,13 @@ static void MenuUpdateTyped(MenuData* m) {
 
     pd->graphics->clear(kColorWhite);
     pd->graphics->drawBitmap(m->background, 0, 0, kBitmapUnflipped);
-    for (int i = 0; i < 2; ++i) {
+    for (int i = 0; i < 3; ++i) {
         int y = 100 + i * 20;
         if (i == m->selected)
-            pd->graphics->fillRect(40, y - 2, 160, 16, kColorBlack);
-        pd->graphics->drawText(m->items[i], strlen(m->items[i]), kASCIIEncoding, 50, y);
+            pd->graphics->fillRect(240, y - 2, 160, 16, kColorBlack);
+        pd->graphics->drawText(m->items[i], strlen(m->items[i]), kASCIIEncoding, 250, y);
     }
 }
-
-static char* fontpath = "/System/Fonts/Asheville-Sans-14-Bold.pft";
-const char *menu_back_sprite = "images/snowflake1";
 
 static void MenuUpdate(void* ptr) {
     MenuUpdateTyped((MenuData*)ptr);
@@ -52,11 +52,12 @@ void CreateMenuState() {
     MenuData* m = pd->system->realloc(NULL, sizeof(MenuData));
 
     const char* err;
-    m->font = pd->graphics->loadFont(fontpath, &err);
-    m->background = pd->graphics->loadBitmap(menu_back_sprite, &err);
+    m->font = pd->graphics->loadFont(FONT_PATH, &err);
+    m->background = pd->graphics->loadBitmap(IMG_MENU_BACK_PATH, &err);
 
     m->items[0] = "Start Game";
     m->items[1] = "Continue";
+    m->items[2] = "Settings";
     m->selected = 0;
 
     switchState(m, NULL, MenuUpdate, MenuExit);
