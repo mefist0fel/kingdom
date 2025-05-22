@@ -5,8 +5,7 @@
 __declspec(dllexport)
 #endif
 
-extern State* game_state();
-extern PlaydateAPI* pd;
+extern void CreateGameState();
 
 typedef struct {
     LCDFont* font;
@@ -15,21 +14,7 @@ typedef struct {
     LCDBitmap* background;
 } MenuData;
 
-void* menu_init() {
-    MenuData* m = pd->system->realloc(NULL, sizeof(MenuData));
-    const char* err;
-    const char* fontpath = "/System/Fonts/Asheville-Sans-14-Bold.pft";
-    m->font = pd->graphics->loadFont(fontpath, &err);
-    m->items[0] = "Start Game";
-    m->items[1] = "Continue";
-    m->selected = 0;
-
-	const char *menu_back_sprite = "images/snowflake1";
-    m->background = pd->graphics->loadBitmap(menu_back_sprite, &err);
-    return m;
-}
-
-void menu_update(MenuData* m) {
+static void MenuUpdateTyped(MenuData* m) {
     PDButtons pushed;
     pd->system->getButtonState(NULL, &pushed, NULL);
 
@@ -37,7 +22,7 @@ void menu_update(MenuData* m) {
         m->selected = (m->selected + 1) % 2;
 
     if (pushed & kButtonA && m->selected == 0) {
-    //    switchState(game_state());
+        CreateGameState();
     }
 
     pd->graphics->clear(kColorWhite);
@@ -50,22 +35,29 @@ void menu_update(MenuData* m) {
     }
 }
 
-void menu_cleanup(MenuData* m) {
+static char* fontpath = "/System/Fonts/Asheville-Sans-14-Bold.pft";
+const char *menu_back_sprite = "images/snowflake1";
+
+static void MenuUpdate(void* ptr) {
+    MenuUpdateTyped((MenuData*)ptr);
+}
+
+static void MenuExit(void* ptr) {
+    MenuData* m = (MenuData*)ptr;
     pd->graphics->freeBitmap(m->background);
     pd->system->realloc(m, 0);
 }
 
-// DEFINE_STATE(menu, MenuData, menu_init, menu_update, menu_cleanup);
+void CreateMenuState() {
+    MenuData* m = pd->system->realloc(NULL, sizeof(MenuData));
 
+    const char* err;
+    m->font = pd->graphics->loadFont(fontpath, &err);
+    m->background = pd->graphics->loadBitmap(menu_back_sprite, &err);
 
-// void create_menu_state() {
-//    Stat MenuState = {
-//     .init = menu_init,
-//     .update = menu_update,
-//     .cleanup = menu_cleanup
-//    }
-// }
+    m->items[0] = "Start Game";
+    m->items[1] = "Continue";
+    m->selected = 0;
 
-    // static void NAME##_update_wrapper(void* data) { UPDATE_FN((MenuData*)data); }
-    // static void NAME##_cleanup_wrapper(void* data) { CLEANUP_FN((MenuData*)data); }
-    // State NAME##_state = { NAME##_init_wrapper, NAME##_update_wrapper, NAME##_cleanup_wrapper }
+    switchState(m, NULL, MenuUpdate, MenuExit);
+}
