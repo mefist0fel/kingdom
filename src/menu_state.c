@@ -27,6 +27,9 @@ static void MenuUpdateTyped(MenuData* m) {
     if (pushed & kButtonA && m->selected == 0) {
         CreateGameState();
     }
+    if (pushed & kButtonB && m->selected == 0) {
+        CreateGameState();
+    }
 
     pd->graphics->clear(kColorWhite);
     pd->graphics->drawBitmap(m->background, 0, 0, kBitmapUnflipped);
