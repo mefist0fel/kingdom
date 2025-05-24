@@ -2,6 +2,12 @@
 #include "state.h"
 #include "assets.h"
 
+#define max(a,b) \
+  ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a > _b ? _a : _b; })
+#define min(a,b) \
+  ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a < _b ? _a : _b; })
+
+
 #ifdef _WINDLL
 __declspec(dllexport)
 #endif
@@ -11,6 +17,8 @@ extern void CreateMenuState();
 typedef struct {
     int x;
     int y;
+    int offset_x;
+    int offset_y;
     LCDBitmap* grass;
     LCDBitmap* forest;
     LCDBitmap* cursor;
@@ -18,35 +26,66 @@ typedef struct {
 } GameData;
 
 #define CURSOR_SPEED 4
+#define TILE_X 32
+#define TILE_Y 32
+int rx;
+int ry;
+
 static void GameUpdateTyped(GameData* g) {
     PDButtons pushed;
     PDButtons current;
     pd->system->getButtonState(&current, &pushed, NULL);
 
     if (current & kButtonDown)
-        g->y += CURSOR_SPEED;
+        g->y += 1;
     if (current & kButtonUp)
-        g->y -= CURSOR_SPEED;
-        
+        g->y -= 1;
     if (current & kButtonLeft)
-        g->x -= CURSOR_SPEED;
+        g->x -= 1;
     if (current & kButtonRight)
-        g->x += CURSOR_SPEED;
+        g->x += 1;
+
+    if (current & kButtonDown)
+        g->offset_y += CURSOR_SPEED;
+    if (current & kButtonUp)
+        g->offset_y -= CURSOR_SPEED;
+    if (current & kButtonLeft)
+        g->offset_x -= CURSOR_SPEED;
+    if (current & kButtonRight)
+        g->offset_x += CURSOR_SPEED;
 
     if (pushed & kButtonA) {
         CreateMenuState();
     }
 
     pd->graphics->clear(kColorWhite);
-    for (int y = 0; y < 8; ++y) {
-        for (int x = 0; x < 14; ++x) {
-            LCDBitmap* tile = ((x + y) % 7 == 0) ? g->forest : g->grass;
-            pd->graphics->drawBitmap(tile, x * 32, y * 32 - (x % 2) * 16, kBitmapUnflipped);
+
+    int mapX = 32;
+    int mapY = 32;
+
+    int tileOffsetX = g->offset_x / TILE_X;
+    int tileOffsetY = g->offset_y / TILE_Y;
+    int startOffsetX = g->offset_x - tileOffsetX * TILE_X;
+    int startOffsetY = g->offset_y - tileOffsetY * TILE_Y;
+
+
+    for (int y = 0; y < 8; ++y)
+    {
+        for (int x = 0; x < 14; ++x)
+        {
+            rx = x + tileOffsetX;
+            ry = y + tileOffsetY;
+            if (rx < 0 || rx >= mapX)
+                continue;
+            if (ry < 0 || ry >= mapY)
+                continue;
+
+            LCDBitmap* tile = ((rx + ry) % 13 == 0) ? g->forest : g->grass;
+            pd->graphics->drawBitmap(tile, -startOffsetX + x * 32, -startOffsetY + y * 32 - (rx % 2) * 16, kBitmapUnflipped);
         }
     }
     
-
-    pd->graphics->drawBitmap(g->castle, 100, 100, kBitmapUnflipped);
+    pd->graphics->drawBitmap(g->castle, 200, 100, kBitmapUnflipped);
 
     pd->graphics->drawBitmap(g->cursor, g->x, g->y, kBitmapUnflipped);
 }
@@ -78,6 +117,9 @@ void CreateGameState() {
 
     g->x = 200;
     g->y = 100;
+
+    g->offset_x = -100;
+    g->offset_y = -50;
 
     switchState(g, NULL, GameUpdate, GameExit);
 }
