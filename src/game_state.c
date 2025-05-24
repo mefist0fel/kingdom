@@ -17,19 +17,19 @@ typedef struct {
     int y;
     int offset_x;
     int offset_y;
-    
+
     LCDBitmap* grass;
     LCDBitmap* forest;
     LCDBitmap* cursor;
     LCDBitmap* castle;
 } GameData;
 
-#define RAND_MAX 32767
 static unsigned long int rnd_next = 1;
 
-static unsigned int random() {
+static unsigned int prandom() {
+    const int rand_max = 32767;
     rnd_next = rnd_next * 1103515245 + 12345;
-    return (unsigned int)(rnd_next / 65536) % (RAND_MAX + 1);
+    return (unsigned int)(rnd_next / 65536) % (rand_max + 1);
 }
 
 Grid* createGrid(int map_x, int map_y) {
@@ -50,7 +50,7 @@ Grid* createRandomGrid(int map_x, int map_y) {
     grid->data = pd->system->realloc(NULL, sizeof(int) * map_x * map_y);
 
     for (int i = 0; i < map_x * map_y; i++) {
-        grid->data[i] = (int)(random() % 7);
+        grid->data[i] = (int)(prandom() % 7);
     }
 
     return grid;
@@ -125,9 +125,6 @@ static void GameUpdateTyped(GameData* g) {
     }
 
     pd->graphics->clear(kColorWhite);
-
-    int mapX = 32;
-    int mapY = 32;
 
     int tileOffsetX = g->offset_x / TILE_X;
     int tileOffsetY = g->offset_y / TILE_Y;
