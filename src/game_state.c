@@ -7,33 +7,29 @@
 __declspec(dllexport)
 #endif
 
-#define max(a,b) \
-  ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a > _b ? _a : _b; })
-#define min(a,b) \
-  ({ __typeof__ (a) _a = (a); __typeof__ (b) _b = (b); _a < _b ? _a : _b; })
-
 extern void CreateMenuState();
 
 typedef struct {
     Grid* grid;
+    Grid* objects;
 
     int x;
     int y;
     int offset_x;
     int offset_y;
+    
     LCDBitmap* grass;
     LCDBitmap* forest;
     LCDBitmap* cursor;
     LCDBitmap* castle;
 } GameData;
 
-#define LCG_A 1664525
-#define LCG_C 1013904223
-#define LCG_M 0xFFFFFFFF
+#define RAND_MAX 32767
+static unsigned long int rnd_next = 1;
 
-static unsigned int lcg_next(unsigned int* seed) {
-    *seed = (*seed) * LCG_A + LCG_C; // & LCG_M;
-    return *seed;
+static unsigned int random() {
+    rnd_next = rnd_next * 1103515245 + 12345;
+    return (unsigned int)(rnd_next / 65536) % (RAND_MAX + 1);
 }
 
 Grid* createGrid(int map_x, int map_y) {
@@ -53,9 +49,8 @@ Grid* createRandomGrid(int map_x, int map_y) {
     grid->size_y = map_y;
     grid->data = pd->system->realloc(NULL, sizeof(int) * map_x * map_y);
 
-    unsigned int seed = 0;
     for (int i = 0; i < map_x * map_y; i++) {
-        grid->data[i] = (int)lcg_next(&seed) % 3;
+        grid->data[i] = (int)(random() % 7);
     }
 
     return grid;
@@ -160,19 +155,17 @@ static void GameUpdateTyped(GameData* g) {
         for (int x = 0; x < 14; ++x)
         {
             rx = x + tileOffsetX;
-            ry = y + tileOffsetY;
-            if (rx < 0 || rx >= mapX)
+            ry = y + tileOffsetY;            
+            if (rx < 0 || rx >= g->objects->size_x)
                 continue;
-            if (ry < 0 || ry >= mapY)
+            if (ry < 0 || ry >= g->objects->size_y)
                 continue;
 
-            if ((rx + 3 + ry) % 19 == 0) {
+            if (getGridValue(g->objects, rx, ry) > 0) {
                 pd->graphics->drawBitmap(g->castle, -startOffsetX + x * 32 - 16, -startOffsetY + y * 32 - (rx % 2) * 16 - 32, kBitmapUnflipped);
             }
         }
     }
-    
-    //pd->graphics->drawBitmap(g->castle, 200, 100, kBitmapUnflipped);
 
     pd->graphics->drawBitmap(g->cursor, g->x, g->y, kBitmapUnflipped);
 }
@@ -185,6 +178,7 @@ static void GameExit(void* ptr) {
     GameData* g = (GameData*)ptr;
 
     destroyGrid(g->grid);
+    destroyGrid(g->objects);
     pd->graphics->freeBitmap(g->grass);
     pd->graphics->freeBitmap(g->forest);
     pd->graphics->freeBitmap(g->castle);
@@ -198,11 +192,15 @@ void CreateGameState() {
     const char* err;
 
     g->grid = createRandomGrid(32, 32);
+    g->objects = createGrid(32, 32);
+
     g->grass = pd->graphics->loadBitmap(IMG_TILE_GRASS, &err);
     g->forest = pd->graphics->loadBitmap(IMG_TILE_TREE, &err);
     g->castle = pd->graphics->loadBitmap(IMG_CASTLE, &err);
 
     g->cursor = pd->graphics->loadBitmap(IMG_CURSOR, &err);
+
+    setGridValue(g->objects, 10, 10, 1);
 
     g->x = 200 - 16;
     g->y = 120 - 16;
