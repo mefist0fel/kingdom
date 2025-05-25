@@ -90,47 +90,12 @@ int rx;
 int ry;
 
 static void GameUpdateTyped(GameData* g) {
-    PDButtons pushed;
-    PDButtons current;
-    pd->system->getButtonState(&current, &pushed, NULL);
-
-    if (current & kButtonLeft)
-        g->x -= CURSOR_SPEED;
-    if (current & kButtonRight)
-        g->x += CURSOR_SPEED;
-    if (current & kButtonDown)
-        g->y += CURSOR_SPEED;
-    if (current & kButtonUp)
-        g->y -= CURSOR_SPEED;
-
-    if (g->x < 0) {
-        g->x += CURSOR_SPEED;
-        g->offset_x -= CURSOR_SPEED;
-    }
-    if (g->x > CANVAS_X - CURSOR_X) {
-        g->x -= CURSOR_SPEED;
-        g->offset_x += CURSOR_SPEED;
-    }
-    if (g->y < 0) {
-        g->y += CURSOR_SPEED;
-        g->offset_y -= CURSOR_SPEED;
-    }
-    if (g->y > CANVAS_Y - CURSOR_Y) {
-        g->y -= CURSOR_SPEED;
-        g->offset_y += CURSOR_SPEED;
-    }
-
-    if (pushed & kButtonA) {
-        CreateMenuState();
-    }
-
     pd->graphics->clear(kColorWhite);
 
     int tileOffsetX = g->offset_x / TILE_X;
     int tileOffsetY = g->offset_y / TILE_Y;
     int startOffsetX = g->offset_x - tileOffsetX * TILE_X;
     int startOffsetY = g->offset_y - tileOffsetY * TILE_Y;
-
 
     for (int y = 0; y < 9; ++y)
     {
@@ -165,6 +130,41 @@ static void GameUpdateTyped(GameData* g) {
     }
 
     pd->graphics->drawBitmap(g->cursor, g->x, g->y, kBitmapUnflipped);
+
+    // Control
+    PDButtons pushed;
+    PDButtons current;
+    pd->system->getButtonState(&current, &pushed, NULL);
+
+    if (current & kButtonLeft)
+        g->x -= CURSOR_SPEED;
+    if (current & kButtonRight)
+        g->x += CURSOR_SPEED;
+    if (current & kButtonDown)
+        g->y += CURSOR_SPEED;
+    if (current & kButtonUp)
+        g->y -= CURSOR_SPEED;
+
+    if (g->x < 0) {
+        g->x += CURSOR_SPEED;
+        g->offset_x -= CURSOR_SPEED;
+    }
+    if (g->x > CANVAS_X - CURSOR_X) {
+        g->x -= CURSOR_SPEED;
+        g->offset_x += CURSOR_SPEED;
+    }
+    if (g->y < 0) {
+        g->y += CURSOR_SPEED;
+        g->offset_y -= CURSOR_SPEED;
+    }
+    if (g->y > CANVAS_Y - CURSOR_Y) {
+        g->y -= CURSOR_SPEED;
+        g->offset_y += CURSOR_SPEED;
+    }
+
+    if (pushed & kButtonA) {
+    //    CreateMenuState();
+    }
 }
 
 static void GameUpdate(void* ptr) {
@@ -182,6 +182,15 @@ static void GameExit(void* ptr) {
 
     pd->graphics->freeBitmap(g->cursor);
     pd->system->realloc(g, 0);
+    pd->system->removeAllMenuItems();
+}
+
+void backToMenuCallback(void* userdata) {
+    CreateMenuState();
+}
+
+void menuItemCallback(void* userdata) {
+
 }
 
 void CreateGameState() {
@@ -204,6 +213,11 @@ void CreateGameState() {
 
     g->offset_x = 0;
     g->offset_y = 0;
+
+    pd->system->addMenuItem("Game menu", backToMenuCallback, NULL);
+    // pd->system->addCheckmarkMenuItem("Chackbox", 1, menuItemCallback, NULL);
+    // const char *options[] = {"one", "two", "three"};
+    // pd->system->addOptionsMenuItem("Options", options, 3, menuItemCallback, NULL);
 
     switchState(g, NULL, GameUpdate, GameExit);
 }
