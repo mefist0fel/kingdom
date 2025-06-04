@@ -9,6 +9,8 @@
         "pd_api_sys.h": "c",
         "pd_api_json.h": "c",
         "pd_api_gfx.h": "c",
-        "assets.h": "c"
+        "assets.h": "c",
+        "grid.h": "c",
+        "building_data.h": "c"
     }
 }

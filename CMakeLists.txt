@@ -5,6 +5,8 @@ set(SOURCES
     src/main.c
     src/menu_state.c
     src/game_state.c
+    src/grid.c
+    src/building_data.c
 )
 
 set(ENVSDK $ENV{PLAYDATE_SDK_PATH})

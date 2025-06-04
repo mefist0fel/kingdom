@@ -9,3 +9,6 @@
 #define IMG_TILE_TREE "images/trees_1"
 
 #define IMG_CASTLE "images/castle_1"
+#define IMG_FARM "images/field_1"
+#define IMG_VILLAGE "images/field_2"
+#define IMG_EMPTY_SLOT "images/empty_slot"

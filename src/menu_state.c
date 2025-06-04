@@ -48,6 +48,7 @@ static void MenuUpdate(void* ptr) {
 static void MenuExit(void* ptr) {
     MenuData* m = (MenuData*)ptr;
     pd->graphics->freeBitmap(m->background);
+    pd->system->realloc(m->font, 0);
     pd->system->realloc(m, 0);
 }
 

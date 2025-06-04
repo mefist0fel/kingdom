@@ -2,6 +2,7 @@
 #include "state.h"
 #include "grid.h"
 #include "assets.h"
+#include "building_data.h"
 
 #ifdef _WINDLL
 __declspec(dllexport)
@@ -9,74 +10,10 @@ __declspec(dllexport)
 
 extern void CreateMenuState();
 
-typedef struct {
-    Grid* grid;
-    Grid* objects;
-
-    int x;
-    int y;
-    int offset_x;
-    int offset_y;
-
-    LCDBitmap* grass;
-    LCDBitmap* forest;
-    LCDBitmap* cursor;
-    LCDBitmap* castle;
-} GameData;
-
-static unsigned long int rnd_next = 1;
-
-static unsigned int prandom() {
-    const int rand_max = 32767;
-    rnd_next = rnd_next * 1103515245 + 12345;
-    return (unsigned int)(rnd_next / 65536) % (rand_max + 1);
-}
-
-Grid* createGrid(int map_x, int map_y) {
-    Grid* grid = pd->system->realloc(NULL, sizeof(Grid));
-    grid->data = pd->system->realloc(NULL, sizeof(int) * map_x * map_y);
-    grid->size_x = map_x;
-    grid->size_y = map_y;
-    for (int i = 0; i < map_x * map_y; i++) {
-        grid->data[i] = 0;
-    }
-    return grid;
-}
-
-Grid* createRandomGrid(int map_x, int map_y) {
-    Grid* grid = pd->system->realloc(NULL, sizeof(Grid));
-    grid->size_x = map_x;
-    grid->size_y = map_y;
-    grid->data = pd->system->realloc(NULL, sizeof(int) * map_x * map_y);
-
-    for (int i = 0; i < map_x * map_y; i++) {
-        grid->data[i] = (int)(prandom() % 7);
-    }
-
-    return grid;
-}
-
-int getGridValue(const Grid* grid, int x, int y) {
-    if (!grid || x < 0 || y < 0 || x >= grid->size_x || y >= grid->size_y)
-        return -1; // error
-    return grid->data[y * grid->size_x + x];
-}
-
-void setGridValue(const Grid* grid, int x, int y, int value) {
-    if (!grid || x < 0 || y < 0 || x >= grid->size_x || y >= grid->size_y)
-        return;
-    grid->data[y * grid->size_x + x] = value;
-}
-
-void destroyGrid(Grid* grid) {
-    if (!grid) return;
-    pd->system->realloc(grid->data, 0);
-    pd->system->realloc(grid, 0);
-}
-
-
+#define MAX_SLOTS 16
 
 #define CURSOR_SPEED 8
+
 #define TILE_X 32
 #define TILE_Y 32
 
@@ -86,55 +23,97 @@ void destroyGrid(Grid* grid) {
 #define CANVAS_X 400
 #define CANVAS_Y 240
 
-int rx;
-int ry;
+typedef struct {
+    Grid* grid;
+    BuildingSlot slots[MAX_SLOTS];
+    FactionData factions[6]; // 0 - neutral / 1 - player / 2-5 - enemies
 
-static void GameUpdateTyped(GameData* g) {
-    pd->graphics->clear(kColorWhite);
+    // Map offset
+    int offset_x;
+    int offset_y;
+    // Cursor position
+    int x;
+    int y;
+    // Slot context menu
+    int selected_slot_index;
+    int selected_building_index;
 
-    int tileOffsetX = g->offset_x / TILE_X;
-    int tileOffsetY = g->offset_y / TILE_Y;
-    int startOffsetX = g->offset_x - tileOffsetX * TILE_X;
-    int startOffsetY = g->offset_y - tileOffsetY * TILE_Y;
+    LCDFont* font;
 
-    for (int y = 0; y < 9; ++y)
-    {
-        for (int x = 0; x < 14; ++x)
-        {
-            rx = x + tileOffsetX;
-            ry = y + tileOffsetY;
-            if (rx < 0 || rx >= g->grid->size_x)
-                continue;
-            if (ry < 0 || ry >= g->grid->size_y)
-                continue;
+    LCDBitmap* grass;
+    LCDBitmap* forest;
+    LCDBitmap* cursor;
+    LCDBitmap* castle;
+    LCDBitmap* building_sprites[N_BUILDING_TYPES];
+} GameData;
 
-            LCDBitmap* tile = (getGridValue(g->grid, rx, ry) == 0) ? g->forest : g->grass;
-            pd->graphics->drawBitmap(tile, -startOffsetX + x * 32, -startOffsetY + y * 32 - (rx % 2) * 16, kBitmapUnflipped);
+
+static void DrawTerrain(GameData* g, int tileOffsetX, int tileOffsetY, int startOffsetX, int startOffsetY) {
+    for (int y = 0; y < 9; ++y) {
+        for (int x = 0; x < 14; ++x) {
+            int rx = x + tileOffsetX;
+            int ry = y + tileOffsetY;
+            if (rx < 0 || rx >= g->grid->size_x || ry < 0 || ry >= g->grid->size_y) continue;
+
+            LCDBitmap* tile = (g->grid->data[ry * g->grid->size_x + rx] == 0) ? g->forest : g->grass;
+            pd->graphics->drawBitmap(tile, -startOffsetX + x * 32, -startOffsetY + y * 32 /* - (rx % 2) * 16*/, kBitmapUnflipped);
         }
     }
-    for (int y = 0; y < 9; ++y)
-    {
-        for (int x = 0; x < 14; ++x)
-        {
-            rx = x + tileOffsetX;
-            ry = y + tileOffsetY;            
-            if (rx < 0 || rx >= g->objects->size_x)
-                continue;
-            if (ry < 0 || ry >= g->objects->size_y)
-                continue;
+}
 
-            if (getGridValue(g->objects, rx, ry) > 0) {
-                pd->graphics->drawBitmap(g->castle, -startOffsetX + x * 32 - 16, -startOffsetY + y * 32 - (rx % 2) * 16 - 32, kBitmapUnflipped);
-            }
+static void DrawBuildings(GameData* g, int tileOffsetX, int tileOffsetY, int startOffsetX, int startOffsetY) {
+    for (int i = 0; i < MAX_SLOTS; ++i) {
+        BuildingSlot* slot = &g->slots[i];
+        if (slot->building_type == BUILDING_NONE)
+            break;
+
+        int sx = slot->x - tileOffsetX;
+        int sy = slot->y - tileOffsetY;
+        if (sx < 0 || sx >= 14 || sy < 0 || sy >= 9) continue;
+
+        LCDBitmap* sprite = g->building_sprites[slot->building_type];
+        if (sprite) {
+            pd->graphics->drawBitmap(
+                sprite,
+                -startOffsetX + sx * 32 - 16,
+                -startOffsetY + sy * 32 /*- (slot->x % 2) * 16*/ - 32,
+                kBitmapUnflipped
+            );
         }
     }
+}
 
+static void DrawResources(GameData* g) {
+    char buffer[64];
+    FactionData* player = &g->factions[1];
+    snprintf(buffer, sizeof(buffer),
+        "G %d (+%d) M %d (+%d) F (%d)",
+        player->resources[RESOURCE_GOLD],
+        player->resources[RESOURCE_GOLD_INCOME],
+        player->resources[RESOURCE_MANA],
+        player->resources[RESOURCE_MANA_INCOME],
+        player->resources[RESOURCE_FOOD]);
+
+    pd->graphics->setFont(g->font);
+    pd->graphics->drawText(buffer, strlen(buffer), kASCIIEncoding, 5, 5);
+}
+
+static void DrawCursor(GameData* g) {
     pd->graphics->drawBitmap(g->cursor, g->x, g->y, kBitmapUnflipped);
+}
 
-    // Control
-    PDButtons pushed;
-    PDButtons current;
-    pd->system->getButtonState(&current, &pushed, NULL);
+static int GetSlotAtCursor(GameData* g) {
+    int cx = (g->x + g->offset_x) / TILE_X;
+    int cy = (g->y + g->offset_y) / TILE_Y;
+    for (int i = 0; i < MAX_SLOTS; ++i) {
+        if (g->slots[i].building_type == BUILDING_NONE) break;
+        if (g->slots[i].x == cx && g->slots[i].y == cy)
+            return i;
+    }
+    return -1;
+}
+
+static void HandleCursorMovement(GameData* g, PDButtons current, PDButtons pushed) {
 
     if (current & kButtonLeft)
         g->x -= CURSOR_SPEED;
@@ -163,8 +142,90 @@ static void GameUpdateTyped(GameData* g) {
     }
 
     if (pushed & kButtonA) {
-    //    CreateMenuState();
+        int index = GetSlotAtCursor(g);
+        if (index >= 0) {
+            g->selected_slot_index = index;
+            g->selected_building_index = 0;
+        }
     }
+}
+
+static void DrawBuildMenu(GameData* g) {
+    BuildingSlot* slot = &g->slots[g->selected_slot_index];
+    const BuildingData* data = &building_data[slot->building_type];
+
+    pd->graphics->setFont(g->font);
+    pd->graphics->fillRect(200, 40, 180, 120, kColorWhite);
+    pd->graphics->drawRect(200, 40, 180, 120, kColorBlack);
+
+    for (int i = 0; i < MAX_TRANSFORMS; ++i) {
+        BuildingType bt = data->transforms[i];
+        if (bt == BUILDING_NONE) break;
+
+        int y = 50 + i * 20;
+        if (i == g->selected_building_index)
+            pd->graphics->fillRect(210, y, 8, 8, kColorBlack);
+        pd->graphics->drawText(building_data[bt].name, strlen(building_data[bt].name), kASCIIEncoding, 230, y);
+    }
+}
+
+static void HandleBuildMenu(GameData* g, PDButtons pushed) {
+    BuildingSlot* slot = &g->slots[g->selected_slot_index];
+    const BuildingData* data = &building_data[slot->building_type];
+
+    if (pushed & kButtonDown) g->selected_building_index++;
+    if (pushed & kButtonUp) g->selected_building_index--;
+    if (g->selected_building_index < 0) g->selected_building_index = 0;
+
+    // Count available options
+    int available = 0;
+    for (int i = 0; i < MAX_TRANSFORMS; ++i) {
+        if (data->transforms[i] == BUILDING_NONE) break;
+        available++;
+    }
+    if (g->selected_building_index >= available)
+        g->selected_building_index = available - 1;
+
+    // Apply transform
+    if (pushed & kButtonA) {
+        BuildingType new_type = data->transforms[g->selected_building_index];
+        const BuildingData* new_data = &building_data[new_type];
+
+        // // TODO: check costs and apply resource logic
+        // slot->building_type = new_type;
+        g->selected_slot_index = -1;
+    }
+    if (pushed & kButtonB) {
+        g->selected_slot_index = -1;
+    }
+}
+
+static void GameUpdateTyped(GameData* g) {
+    pd->graphics->clear(kColorWhite);
+
+    int tileOffsetX = g->offset_x / TILE_X;
+    int tileOffsetY = g->offset_y / TILE_Y;
+    int startOffsetX = g->offset_x - tileOffsetX * TILE_X;
+    int startOffsetY = g->offset_y - tileOffsetY * TILE_Y;
+
+    DrawTerrain(g, tileOffsetX, tileOffsetY, startOffsetX, startOffsetY);
+    DrawBuildings(g, tileOffsetX, tileOffsetY, startOffsetX, startOffsetY);
+
+    pd->graphics->drawBitmap(g->cursor, g->x, g->y, kBitmapUnflipped);
+
+    // Control
+    PDButtons pushed;
+    PDButtons current;
+    pd->system->getButtonState(&current, &pushed, NULL);
+
+    if (g->selected_slot_index == -1) {
+        DrawCursor(g);
+        HandleCursorMovement(g, current, pushed);
+    } else {
+        DrawBuildMenu(g);
+        HandleBuildMenu(g, pushed);
+    }
+    DrawResources(g);
 }
 
 static void GameUpdate(void* ptr) {
@@ -175,12 +236,16 @@ static void GameExit(void* ptr) {
     GameData* g = (GameData*)ptr;
 
     destroyGrid(g->grid);
-    destroyGrid(g->objects);
+    
     pd->graphics->freeBitmap(g->grass);
     pd->graphics->freeBitmap(g->forest);
     pd->graphics->freeBitmap(g->castle);
+    
+    for (int i = 0; i < N_BUILDING_TYPES; ++i)
+        if (g->building_sprites[i]) pd->graphics->freeBitmap(g->building_sprites[i]);
 
     pd->graphics->freeBitmap(g->cursor);
+    pd->system->realloc(g->font, 0);
     pd->system->realloc(g, 0);
     pd->system->removeAllMenuItems();
 }
@@ -198,18 +263,57 @@ void CreateGameState() {
     const char* err;
 
     g->grid = createRandomGrid(32, 32);
-    g->objects = createGrid(32, 32);
+
+    g->font = pd->graphics->loadFont(FONT_PATH, &err);
 
     g->grass = pd->graphics->loadBitmap(IMG_TILE_GRASS, &err);
     g->forest = pd->graphics->loadBitmap(IMG_TILE_TREE, &err);
-    g->castle = pd->graphics->loadBitmap(IMG_CASTLE, &err);
+    g->castle = pd->graphics->loadBitmap(IMG_CASTLE, &err); // TODO kill me
 
     g->cursor = pd->graphics->loadBitmap(IMG_CURSOR, &err);
 
-    setGridValue(g->objects, 10, 10, 1);
+    // Load building sprites
+    for (int i = 0; i < N_BUILDING_TYPES; ++i) g->building_sprites[i] = NULL;
+    g->building_sprites[BUILDING_CASTLE] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
+    g->building_sprites[BUILDING_FARM] = pd->graphics->loadBitmap(IMG_FARM, &err);
+    g->building_sprites[BUILDING_EMPTY] = pd->graphics->loadBitmap(IMG_EMPTY_SLOT, &err);
+    g->building_sprites[BUILDING_VILLAGE] = pd->graphics->loadBitmap(IMG_VILLAGE, &err);
+    g->building_sprites[BUILDING_TEMPLE] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
+    g->building_sprites[BUILDING_BARRACKS] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
+    g->building_sprites[BUILDING_CITADEL] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
+    g->building_sprites[BUILDING_OUTPOST] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
+    g->building_sprites[BUILDING_ALCHEMIST] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
+    g->building_sprites[BUILDING_MINE] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
+
+    // Initialize slots (zeroed by default)
+    g->slots[0] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_CASTLE, .x = 4, .y = 5 };
+    g->slots[1] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_EMPTY, .x = 6, .y = 5 };
+    g->slots[2] = (BuildingSlot){ .region_id = 1, .faction_id = 2, .building_type = BUILDING_CASTLE, .x = 10, .y = 6 };
+    g->slots[3] = (BuildingSlot){ .region_id = 1, .faction_id = 2, .building_type = BUILDING_EMPTY, .x = 12, .y = 6 };
+    g->slots[4] = (BuildingSlot){ .region_id = 2, .faction_id = FACTION_NEUTRAL, .building_type = BUILDING_OUTPOST, .x = 6, .y = 10 };
+    g->slots[5] = (BuildingSlot){ .region_id = 2, .faction_id = FACTION_NEUTRAL, .building_type = BUILDING_VILLAGE, .x = 8, .y = 10 };
+
+    // init factions
+    FactionData* player = &g->factions[FACTION_PLAYER];
+    player->resources[RESOURCE_GOLD] = 50;
+    player->resources[RESOURCE_GOLD_INCOME] = 3;
+    player->resources[RESOURCE_MANA] = 10;
+    player->resources[RESOURCE_MANA_INCOME] = 1;
+    player->resources[RESOURCE_FOOD] = 5;
+
+    // Враг (фракция 2)
+    FactionData* enemy = &g->factions[FACTION_ENEMY];
+    enemy->resources[RESOURCE_GOLD] = 30;
+    enemy->resources[RESOURCE_GOLD_INCOME] = 2;
+    enemy->resources[RESOURCE_MANA] = 5;
+    enemy->resources[RESOURCE_MANA_INCOME] = 0;
+    enemy->resources[RESOURCE_FOOD] = 4;
 
     g->x = 200 - 16;
     g->y = 120 - 16;
+
+    g->selected_slot_index = -1; // not selected
+    g->selected_building_index = 0;
 
     g->offset_x = 0;
     g->offset_y = 0;
