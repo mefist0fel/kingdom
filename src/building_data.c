@@ -1,5 +1,3 @@
-
-
 #include "building_data.h"
 
 const BuildingData building_data[N_BUILDING_TYPES] = {

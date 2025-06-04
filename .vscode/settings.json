@@ -11,6 +11,8 @@
         "pd_api_gfx.h": "c",
         "assets.h": "c",
         "grid.h": "c",
-        "building_data.h": "c"
+        "building_data.h": "c",
+        "stdint.h": "c",
+        "vcruntime.h": "c"
     }
 }

@@ -1,7 +1,4 @@
-#ifndef BUILDING_DATA_H
-#define BUILDING_DATA_H
-
-#include <stdint.h>
+#pragma once
 
 #define MAX_RESOURCE_CHANGES 4
 #define MAX_TRANSFORMS 4
@@ -46,35 +43,32 @@ typedef enum {
 #define FACTION_E_4 5
 
 typedef struct {
-    uint8_t id;
+    signed char id;
     int resources[N_RESOURCES];
 } FactionData;
 
 typedef struct {
-    uint8_t region_id;
-    uint8_t faction_id;
-    uint8_t building_type; // BuildingType
-    uint16_t timer;
+    signed char region_id;
+    signed char faction_id;
+    signed char building_type; // BuildingType
+    short timer;
     int x, y, w, h; // position for UI/hitbox
 } BuildingSlot;
 
 // ===== building core =====
 typedef struct {
-    uint8_t type;   // ResourceType
-    int8_t amount;
+    signed char type;   // ResourceType
+    char amount;
 } ResourceChange;
 
 typedef struct {
-    uint8_t id; // BuildingType
+    signed char id; // BuildingType
     const char* name;
     ResourceChange cost[MAX_RESOURCE_CHANGES];
     ResourceChange static_change[MAX_RESOURCE_CHANGES];
     ResourceChange income[MAX_RESOURCE_CHANGES];
-    uint8_t transforms[MAX_TRANSFORMS]; // Possible transforms (FSM)
-    uint16_t build_time; // In ticks
+    signed char transforms[MAX_TRANSFORMS]; // Possible transforms (FSM)
+    short build_time; // In ticks
 } BuildingData;
 
 extern const BuildingData building_data[N_BUILDING_TYPES];
-
-
-#endif // BUILDING_DATA_H

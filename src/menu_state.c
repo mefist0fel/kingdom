@@ -61,7 +61,7 @@ void CreateMenuState() {
 
     m->items[0] = "Start Game";
     m->items[1] = "Continue";
-    m->items[2] = "Settings";
+    m->items[2] = "Conf";
     m->selected = 0;
 
     switchState(m, NULL, MenuUpdate, MenuExit);

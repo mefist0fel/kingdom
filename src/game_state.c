@@ -84,9 +84,9 @@ static void DrawBuildings(GameData* g, int tileOffsetX, int tileOffsetY, int sta
 }
 
 static void DrawResources(GameData* g) {
-    char buffer[64];
     FactionData* player = &g->factions[1];
-    snprintf(buffer, sizeof(buffer),
+    char* buffer = NULL;
+    pd->system->formatString(&buffer,
         "G %d (+%d) M %d (+%d) F (%d)",
         player->resources[RESOURCE_GOLD],
         player->resources[RESOURCE_GOLD_INCOME],
@@ -96,6 +96,7 @@ static void DrawResources(GameData* g) {
 
     pd->graphics->setFont(g->font);
     pd->graphics->drawText(buffer, strlen(buffer), kASCIIEncoding, 5, 5);
+    pd->system->realloc((void*)buffer, 0); // Free buff
 }
 
 static void DrawCursor(GameData* g) {
