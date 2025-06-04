@@ -17,7 +17,7 @@ const BuildingData building_data[N_BUILDING_TYPES] = {
     },
     [BUILDING_CASTLE] = {
         .id = BUILDING_CASTLE,
-        .name = "Castle",
+        .name = "Castle G 10",
         .cost = {{RESOURCE_GOLD, 10}},
         .static_change = {
             {RESOURCE_FOOD, 1},
@@ -29,7 +29,7 @@ const BuildingData building_data[N_BUILDING_TYPES] = {
     },
     [BUILDING_CITADEL] = {
         .id = BUILDING_CITADEL,
-        .name = "Citadel",
+        .name = "Citadel G 20",
         .cost = {{RESOURCE_GOLD, 20}},
         .static_change = {
             {RESOURCE_FOOD, 2},
@@ -42,7 +42,7 @@ const BuildingData building_data[N_BUILDING_TYPES] = {
     },
     [BUILDING_EMPTY] = {
         .id = BUILDING_EMPTY,
-        .name = "Empty",
+        .name = "Destroy",
         .cost = {},
         .static_change = {},
         .income = {},
@@ -56,41 +56,41 @@ const BuildingData building_data[N_BUILDING_TYPES] = {
     },
     [BUILDING_FARM] = {
         .id = BUILDING_FARM,
-        .name = "Farm",
+        .name = "Farm G 10",
         .cost = {{RESOURCE_GOLD, 10}},
         .static_change = {{RESOURCE_FOOD, 1}},
         .income = {},
-        .transforms = {},
+        .transforms = {BUILDING_EMPTY},
         .build_time = 0
     },
     [BUILDING_VILLAGE] = {
         .id = BUILDING_VILLAGE,
-        .name = "Village",
+        .name = "Village G 10",
         .cost = {{RESOURCE_GOLD, 10}},
         .static_change = {{RESOURCE_GOLD_INCOME, 1}},
         .income = {},
-        .transforms = {},
+        .transforms = {BUILDING_EMPTY},
         .build_time = 0
     },
     [BUILDING_TEMPLE] = {
         .id = BUILDING_TEMPLE,
-        .name = "Temple",
+        .name = "Temple G 10",
         .cost = {{RESOURCE_GOLD, 10}},
         .static_change = {{RESOURCE_MANA_INCOME, 1}},
         .income = {},
-        .transforms = {},
+        .transforms = {BUILDING_EMPTY},
         .build_time = 0
     },
     [BUILDING_BARRACKS] = {
         .id = BUILDING_BARRACKS,
-        .name = "Barracks",
+        .name = "Barracks G 15",
         .cost = {{RESOURCE_GOLD, 15}},
         .static_change = {
             {RESOURCE_FOOD, 1},
             {RESOURCE_UNIT_LIMIT, 1}
         },
         .income = {},
-        .transforms = {},
+        .transforms = {BUILDING_EMPTY},
         .build_time = 0
     },
     [BUILDING_GOLD_VEIN] = {
@@ -104,11 +104,11 @@ const BuildingData building_data[N_BUILDING_TYPES] = {
     },
     [BUILDING_MINE] = {
         .id = BUILDING_MINE,
-        .name = "Mine",
+        .name = "Mine G 10",
         .cost = {{RESOURCE_GOLD, 10}},
         .static_change = {{RESOURCE_GOLD_INCOME, 1}},
         .income = {},
-        .transforms = {},
+        .transforms = {BUILDING_GOLD_VEIN},
         .build_time = 0
     },
     [BUILDING_CRYSTAL_VEIN] = {
@@ -122,11 +122,11 @@ const BuildingData building_data[N_BUILDING_TYPES] = {
     },
     [BUILDING_ALCHEMIST] = {
         .id = BUILDING_ALCHEMIST,
-        .name = "Alchemist",
+        .name = "Alchemist G 10",
         .cost = {{RESOURCE_GOLD, 10}},
         .static_change = {{RESOURCE_MANA_INCOME, 1}},
         .income = {},
-        .transforms = {},
+        .transforms = {BUILDING_CRYSTAL_VEIN},
         .build_time = 0
     },
 };

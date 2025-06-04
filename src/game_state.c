@@ -169,6 +169,26 @@ static void DrawBuildMenu(GameData* g) {
     }
 }
 
+static void ApplyResourceChanges(FactionData* faction, const ResourceChange* changes, int multiplier) {
+    for (int i = 0; i < MAX_RESOURCE_CHANGES; ++i) {
+        if (changes[i].type == RESOURCE_NONE) break;
+        faction->resources[changes[i].type] += changes[i].amount * multiplier;
+    }
+}
+
+static void ChangeBuildingInSlot(GameData* g, int slot_index, BuildingType new_type) {
+    BuildingSlot* slot = &g->slots[slot_index];
+    const BuildingData* old_data = &building_data[slot->building_type];
+    const BuildingData* new_data = &building_data[new_type];
+    FactionData* faction = &g->factions[slot->faction_id];
+
+    ApplyResourceChanges(faction, old_data->static_change, -1);
+    ApplyResourceChanges(faction, new_data->cost, -1);
+    ApplyResourceChanges(faction, new_data->static_change, 1);
+
+    slot->building_type = new_type;
+}
+
 static void HandleBuildMenu(GameData* g, PDButtons pushed) {
     BuildingSlot* slot = &g->slots[g->selected_slot_index];
     const BuildingData* data = &building_data[slot->building_type];
@@ -177,7 +197,6 @@ static void HandleBuildMenu(GameData* g, PDButtons pushed) {
     if (pushed & kButtonUp) g->selected_building_index--;
     if (g->selected_building_index < 0) g->selected_building_index = 0;
 
-    // Count available options
     int available = 0;
     for (int i = 0; i < MAX_TRANSFORMS; ++i) {
         if (data->transforms[i] == BUILDING_NONE) break;
@@ -186,16 +205,15 @@ static void HandleBuildMenu(GameData* g, PDButtons pushed) {
     if (g->selected_building_index >= available)
         g->selected_building_index = available - 1;
 
-    // Apply transform
-    if (pushed & kButtonA) {
+    if (pushed & kButtonA && g->selected_building_index >= 0) {
         BuildingType new_type = data->transforms[g->selected_building_index];
-        const BuildingData* new_data = &building_data[new_type];
-
-        // // TODO: check costs and apply resource logic
-        // slot->building_type = new_type;
+        ChangeBuildingInSlot(g, g->selected_slot_index, new_type);
         g->selected_slot_index = -1;
+        g->selected_building_index = 0;
     }
+
     if (pushed & kButtonB) {
+        g->selected_building_index = 0;
         g->selected_slot_index = -1;
     }
 }
@@ -295,19 +313,19 @@ void CreateGameState() {
 
     // init factions
     FactionData* player = &g->factions[FACTION_PLAYER];
-    player->resources[RESOURCE_GOLD] = 50;
-    player->resources[RESOURCE_GOLD_INCOME] = 3;
-    player->resources[RESOURCE_MANA] = 10;
-    player->resources[RESOURCE_MANA_INCOME] = 1;
-    player->resources[RESOURCE_FOOD] = 5;
+    player->resources[RESOURCE_GOLD] = 100;
+    player->resources[RESOURCE_GOLD_INCOME] = 1;
+    player->resources[RESOURCE_MANA] = 0;
+    player->resources[RESOURCE_MANA_INCOME] = 0;
+    player->resources[RESOURCE_FOOD] = 2;
 
     // Враг (фракция 2)
     FactionData* enemy = &g->factions[FACTION_ENEMY];
-    enemy->resources[RESOURCE_GOLD] = 30;
-    enemy->resources[RESOURCE_GOLD_INCOME] = 2;
-    enemy->resources[RESOURCE_MANA] = 5;
+    enemy->resources[RESOURCE_GOLD] = 100;
+    enemy->resources[RESOURCE_GOLD_INCOME] = 0;
+    enemy->resources[RESOURCE_MANA] = 0;
     enemy->resources[RESOURCE_MANA_INCOME] = 0;
-    enemy->resources[RESOURCE_FOOD] = 4;
+    enemy->resources[RESOURCE_FOOD] = 3;
 
     g->x = 200 - 16;
     g->y = 120 - 16;
