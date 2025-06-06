@@ -8,7 +8,9 @@
 #define IMG_TILE_GRASS "images/empty"
 #define IMG_TILE_TREE "images/trees"
 
+#define IMG_OUTPOST "images/s_outpost"
 #define IMG_CASTLE "images/s_castle"
+#define IMG_CITADEL "images/s_citadel"
 #define IMG_FARM "images/s_farm"
 #define IMG_VILLAGE "images/s_village"
 #define IMG_BARRACKS "images/s_barracks"

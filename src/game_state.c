@@ -10,7 +10,7 @@ __declspec(dllexport)
 
 extern void CreateMenuState();
 
-#define MAX_SLOTS 16
+#define MAX_SLOTS 64
 
 #define CANVAS_X 400
 #define CANVAS_Y 240
@@ -318,12 +318,14 @@ static void SortBuildingsByY(BuildingSlot* slots, int max_slots) {
             continue;
 
         for (int j = 0; j < max_slots; ++j) {
-            if (i == j) continue;
+            if (i == j)
+                continue;
+
             if (slots[j].building_type == BUILDING_NONE)
                 continue;
 
-            if (slots[i].y < slots[j].y)
-                continue;
+            // if (slots[i].y < slots[j].y)
+            //     continue;
 
             if (slots[i].y > slots[j].y) {
                 BuildingSlot tmp = slots[i];
@@ -356,18 +358,34 @@ void CreateGameState() {
     g->building_sprites[BUILDING_VILLAGE] = pd->graphics->loadBitmap(IMG_VILLAGE, &err);
     g->building_sprites[BUILDING_TEMPLE] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
     g->building_sprites[BUILDING_BARRACKS] = pd->graphics->loadBitmap(IMG_BARRACKS, &err);
-    g->building_sprites[BUILDING_CITADEL] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
-    g->building_sprites[BUILDING_OUTPOST] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
+    g->building_sprites[BUILDING_CITADEL] = pd->graphics->loadBitmap(IMG_CITADEL, &err);
+    g->building_sprites[BUILDING_OUTPOST] = pd->graphics->loadBitmap(IMG_OUTPOST, &err);
     g->building_sprites[BUILDING_ALCHEMIST] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
     g->building_sprites[BUILDING_MINE] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
 
-    // Initialize slots (zeroed by default)
     g->slots[0] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_CASTLE, .x = 4, .y = 5 };
-    g->slots[1] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_EMPTY, .x = 6, .y = 5 };
-    g->slots[2] = (BuildingSlot){ .region_id = 1, .faction_id = 2, .building_type = BUILDING_CASTLE, .x = 10, .y = 6 };
-    g->slots[3] = (BuildingSlot){ .region_id = 1, .faction_id = 2, .building_type = BUILDING_EMPTY, .x = 12, .y = 6 };
-    g->slots[4] = (BuildingSlot){ .region_id = 2, .faction_id = FACTION_NEUTRAL, .building_type = BUILDING_OUTPOST, .x = 6, .y = 10 };
-    g->slots[5] = (BuildingSlot){ .region_id = 2, .faction_id = FACTION_NEUTRAL, .building_type = BUILDING_VILLAGE, .x = 8, .y = 10 };
+    g->slots[1] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_EMPTY, .x = 3, .y = 5 };
+    g->slots[2] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_EMPTY, .x = 3, .y = 4 };
+    g->slots[3] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_EMPTY, .x = 5, .y = 5 };
+    g->slots[4] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_EMPTY, .x = 5, .y = 4 };
+
+    g->slots[5] = (BuildingSlot){ .region_id = 1, .faction_id = 0, .building_type = BUILDING_OUTPOST, .x = 4, .y = 10 };
+    g->slots[6] = (BuildingSlot){ .region_id = 1, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 3, .y = 10 };
+    g->slots[7] = (BuildingSlot){ .region_id = 1, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 3, .y = 9 };
+    g->slots[8] = (BuildingSlot){ .region_id = 1, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 5, .y = 10 };
+    g->slots[9] = (BuildingSlot){ .region_id = 1, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 5, .y = 9 };
+
+    g->slots[10] = (BuildingSlot){ .region_id = 2, .faction_id = 0, .building_type = BUILDING_OUTPOST, .x = 8, .y = 5 };
+    g->slots[11] = (BuildingSlot){ .region_id = 2, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 7, .y = 5 };
+    g->slots[12] = (BuildingSlot){ .region_id = 2, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 7, .y = 4 };
+    g->slots[13] = (BuildingSlot){ .region_id = 2, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 9, .y = 5 };
+    g->slots[14] = (BuildingSlot){ .region_id = 2, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 9, .y = 4 };
+
+    g->slots[15] = (BuildingSlot){ .region_id = 3, .faction_id = 2, .building_type = BUILDING_CASTLE, .x = 8, .y = 10 };
+    g->slots[16] = (BuildingSlot){ .region_id = 3, .faction_id = 2, .building_type = BUILDING_EMPTY, .x = 7, .y = 10 };
+    g->slots[17] = (BuildingSlot){ .region_id = 3, .faction_id = 2, .building_type = BUILDING_EMPTY, .x = 7, .y = 9 };
+    g->slots[18] = (BuildingSlot){ .region_id = 3, .faction_id = 2, .building_type = BUILDING_EMPTY, .x = 9, .y = 10 };
+    g->slots[19] = (BuildingSlot){ .region_id = 3, .faction_id = 2, .building_type = BUILDING_EMPTY, .x = 9, .y = 9 };
 
     SortBuildingsByY(g->slots, MAX_SLOTS);
 
