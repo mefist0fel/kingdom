@@ -1,14 +1,24 @@
 #pragma once
 
-#define FONT_PATH "castle_bg"
+#define FONT_PATH "/System/Fonts/Asheville-Sans-14-Bold.pft"
 #define IMG_MENU_BACK_PATH "images/menu_back"
 
 #define IMG_CURSOR "images/cursor"
 
-#define IMG_TILE_GRASS "images/empty_1"
-#define IMG_TILE_TREE "images/trees_1"
+#define IMG_TILE_GRASS "images/empty"
+#define IMG_TILE_TREE "images/trees"
 
-#define IMG_CASTLE "images/castle_1"
-#define IMG_FARM "images/field_1"
-#define IMG_VILLAGE "images/field_2"
-#define IMG_EMPTY_SLOT "images/empty_slot"
+#define IMG_CASTLE "images/s_castle"
+#define IMG_FARM "images/s_farm"
+#define IMG_VILLAGE "images/s_village"
+#define IMG_BARRACKS "images/s_barracks"
+#define IMG_EMPTY_SLOT "images/s_empty_slot"
+
+
+#if !defined(MIN)
+#define MIN(a, b) (((a)<(b))?(a):(b))
+#endif
+
+#if !defined(MAX)
+#define MAX(a, b) (((a)>(b))?(a):(b))
+#endif
