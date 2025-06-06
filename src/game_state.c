@@ -54,7 +54,6 @@ typedef struct {
     LCDBitmap* grass;
     LCDBitmap* forest;
     LCDBitmap* cursor;
-    LCDBitmap* castle;
     LCDBitmap* building_sprites[N_BUILDING_TYPES];
 } GameData;
 
@@ -70,7 +69,7 @@ static void DrawTerrain(GameData* g, int tileOffsetX, int tileOffsetY, int start
             pd->graphics->drawBitmap(tile, -startOffsetX + x * TILE_X, -startOffsetY + y * TILE_Y, kBitmapUnflipped);
         }
     }
-    pd->graphics->drawRect(0 - startOffsetX, 0 - startOffsetY, CANVAS_X, CANVAS_Y, kColorBlack);
+    pd->graphics->drawRect(0 - startOffsetX - tileOffsetX * TILE_X, 0 - startOffsetY - tileOffsetY * TILE_Y, CANVAS_X, CANVAS_Y, kColorBlack);
 }
 
 static void DrawBuildings(GameData* g, int tileOffsetX, int tileOffsetY, int startOffsetX, int startOffsetY) {
@@ -289,24 +288,6 @@ static void GameUpdate(void* ptr) {
     GameUpdateTyped((GameData*)ptr);
 }
 
-static void GameExit(void* ptr) {
-    GameData* g = (GameData*)ptr;
-
-    destroyGrid(g->grid);
-    
-    pd->graphics->freeBitmap(g->grass);
-    pd->graphics->freeBitmap(g->forest);
-    pd->graphics->freeBitmap(g->castle);
-    
-    for (int i = 0; i < N_BUILDING_TYPES; ++i)
-        if (g->building_sprites[i]) pd->graphics->freeBitmap(g->building_sprites[i]);
-
-    pd->graphics->freeBitmap(g->cursor);
-    pd->system->realloc(g->font, 0);
-    pd->system->realloc(g, 0);
-    pd->system->removeAllMenuItems();
-}
-
 void backToMenuCallback(void* userdata) {
     CreateMenuState();
 }
@@ -324,16 +305,31 @@ static void SortBuildingsByY(BuildingSlot* slots, int max_slots) {
             if (slots[j].building_type == BUILDING_NONE)
                 continue;
 
-            // if (slots[i].y < slots[j].y)
-            //     continue;
-
-            if (slots[i].y > slots[j].y) {
+            if (slots[i].y < slots[j].y) {
                 BuildingSlot tmp = slots[i];
                 slots[i] = slots[j];
                 slots[j] = tmp;
             }
         }
     }
+}
+
+static void GameExit(void* ptr) {
+    GameData* g = (GameData*)ptr;
+
+    destroyGrid(g->grid);
+    
+    pd->system->removeAllMenuItems();
+
+    pd->graphics->freeBitmap(g->grass);
+    pd->graphics->freeBitmap(g->forest);
+    pd->graphics->freeBitmap(g->cursor);
+    
+    for (int i = 0; i < N_BUILDING_TYPES; ++i)
+        if (g->building_sprites[i]) pd->graphics->freeBitmap(g->building_sprites[i]);
+
+    pd->system->realloc(g->font, 0);
+    pd->system->realloc(g, 0);
 }
 
 void CreateGameState() {
@@ -346,12 +342,13 @@ void CreateGameState() {
 
     g->grass = pd->graphics->loadBitmap(IMG_TILE_GRASS, &err);
     g->forest = pd->graphics->loadBitmap(IMG_TILE_TREE, &err);
-    g->castle = pd->graphics->loadBitmap(IMG_CASTLE, &err); // TODO kill me
 
     g->cursor = pd->graphics->loadBitmap(IMG_CURSOR, &err);
 
     // Load building sprites
-    for (int i = 0; i < N_BUILDING_TYPES; ++i) g->building_sprites[i] = NULL;
+    for (int i = 0; i < N_BUILDING_TYPES; ++i) 
+        g->building_sprites[i] = NULL;
+
     g->building_sprites[BUILDING_CASTLE] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
     g->building_sprites[BUILDING_FARM] = pd->graphics->loadBitmap(IMG_FARM, &err);
     g->building_sprites[BUILDING_EMPTY] = pd->graphics->loadBitmap(IMG_EMPTY_SLOT, &err);
@@ -364,30 +361,30 @@ void CreateGameState() {
     g->building_sprites[BUILDING_MINE] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
 
     g->slots[0] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_CASTLE, .x = 4, .y = 5 };
-    g->slots[1] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_EMPTY, .x = 3, .y = 5 };
-    g->slots[2] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_EMPTY, .x = 3, .y = 4 };
-    g->slots[3] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_EMPTY, .x = 5, .y = 5 };
-    g->slots[4] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_EMPTY, .x = 5, .y = 4 };
+    g->slots[1] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_EMPTY, .x = 3, .y = 4 };
+    g->slots[2] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_EMPTY, .x = 3, .y = 5 };
+    g->slots[3] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_EMPTY, .x = 5, .y = 4 };
+    g->slots[4] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_EMPTY, .x = 5, .y = 5 };
 
     g->slots[5] = (BuildingSlot){ .region_id = 1, .faction_id = 0, .building_type = BUILDING_OUTPOST, .x = 4, .y = 10 };
-    g->slots[6] = (BuildingSlot){ .region_id = 1, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 3, .y = 10 };
-    g->slots[7] = (BuildingSlot){ .region_id = 1, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 3, .y = 9 };
-    g->slots[8] = (BuildingSlot){ .region_id = 1, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 5, .y = 10 };
-    g->slots[9] = (BuildingSlot){ .region_id = 1, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 5, .y = 9 };
+    g->slots[6] = (BuildingSlot){ .region_id = 1, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 3, .y = 9 };
+    g->slots[7] = (BuildingSlot){ .region_id = 1, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 3, .y = 10 };
+    g->slots[8] = (BuildingSlot){ .region_id = 1, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 5, .y = 9 };
+    g->slots[9] = (BuildingSlot){ .region_id = 1, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 5, .y = 10 };
 
     g->slots[10] = (BuildingSlot){ .region_id = 2, .faction_id = 0, .building_type = BUILDING_OUTPOST, .x = 8, .y = 5 };
-    g->slots[11] = (BuildingSlot){ .region_id = 2, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 7, .y = 5 };
-    g->slots[12] = (BuildingSlot){ .region_id = 2, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 7, .y = 4 };
-    g->slots[13] = (BuildingSlot){ .region_id = 2, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 9, .y = 5 };
-    g->slots[14] = (BuildingSlot){ .region_id = 2, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 9, .y = 4 };
+    g->slots[11] = (BuildingSlot){ .region_id = 2, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 7, .y = 4 };
+    g->slots[12] = (BuildingSlot){ .region_id = 2, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 7, .y = 5 };
+    g->slots[13] = (BuildingSlot){ .region_id = 2, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 9, .y = 4 };
+    g->slots[14] = (BuildingSlot){ .region_id = 2, .faction_id = 0, .building_type = BUILDING_EMPTY, .x = 9, .y = 5 };
 
     g->slots[15] = (BuildingSlot){ .region_id = 3, .faction_id = 2, .building_type = BUILDING_CASTLE, .x = 8, .y = 10 };
-    g->slots[16] = (BuildingSlot){ .region_id = 3, .faction_id = 2, .building_type = BUILDING_EMPTY, .x = 7, .y = 10 };
-    g->slots[17] = (BuildingSlot){ .region_id = 3, .faction_id = 2, .building_type = BUILDING_EMPTY, .x = 7, .y = 9 };
-    g->slots[18] = (BuildingSlot){ .region_id = 3, .faction_id = 2, .building_type = BUILDING_EMPTY, .x = 9, .y = 10 };
-    g->slots[19] = (BuildingSlot){ .region_id = 3, .faction_id = 2, .building_type = BUILDING_EMPTY, .x = 9, .y = 9 };
+    g->slots[16] = (BuildingSlot){ .region_id = 3, .faction_id = 2, .building_type = BUILDING_EMPTY, .x = 7, .y = 9 };
+    g->slots[17] = (BuildingSlot){ .region_id = 3, .faction_id = 2, .building_type = BUILDING_EMPTY, .x = 7, .y = 10 };
+    g->slots[18] = (BuildingSlot){ .region_id = 3, .faction_id = 2, .building_type = BUILDING_EMPTY, .x = 9, .y = 9 };
+    g->slots[19] = (BuildingSlot){ .region_id = 3, .faction_id = 2, .building_type = BUILDING_EMPTY, .x = 9, .y = 10 };
 
-    SortBuildingsByY(g->slots, MAX_SLOTS);
+    // SortBuildingsByY(g->slots, MAX_SLOTS);
 
     // init factions
     FactionData* player = &g->factions[FACTION_PLAYER];
@@ -411,6 +408,7 @@ void CreateGameState() {
     g->x = 16;
     g->y = 0;
     g->input_delay_timer = 0;
+    pd->system->removeAllMenuItems();
 
     g->selected_slot_index = -1; // not selected
     g->selected_building_index = 0;
