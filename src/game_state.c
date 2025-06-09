@@ -328,9 +328,9 @@ static void GameExit(void* ptr) {
     for (int i = 0; i < N_BUILDING_TYPES; ++i)
         if (g->building_sprites[i]) pd->graphics->freeBitmap(g->building_sprites[i]);
 
-    pd->system->realloc(g->font, 0);
+    // pd->system->realloc(g->font, 0); // Don't need to unload system font    
     pd->system->realloc(g, 0);
-}
+} 
 
 void CreateGameState() {
     GameData* g = pd->system->realloc(NULL, sizeof(GameData));
@@ -360,6 +360,7 @@ void CreateGameState() {
     g->building_sprites[BUILDING_ALCHEMIST] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
     g->building_sprites[BUILDING_MINE] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
 
+    // TODO add default buildings init
     g->slots[0] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_CASTLE, .x = 4, .y = 5 };
     g->slots[1] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_EMPTY, .x = 3, .y = 4 };
     g->slots[2] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_EMPTY, .x = 3, .y = 5 };
