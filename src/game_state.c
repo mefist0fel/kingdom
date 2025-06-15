@@ -21,7 +21,7 @@ extern void CreateMenuState();
 #define TILE_Y 32
 
 #define NUM_TILES_X ((CANVAS_X / TILE_X) + 1)
-#define NUM_TILES_Y ((CANVAS_Y / TILE_Y) + 2)
+#define NUM_TILES_Y ((CANVAS_Y / TILE_Y) + 1)
 
 #define CURSOR_X 32
 #define CURSOR_Y 32
@@ -61,6 +61,7 @@ typedef struct {
     LCDBitmap* forest;
     LCDBitmap* cursor;
     LCDBitmap* building_sprites[N_BUILDING_TYPES];
+    LCDBitmap* army_sprites[N_BUILDING_TYPES];
 } GameData;
 
 
@@ -88,8 +89,8 @@ void UpdateDrawEntries(DrawEntry* draw_entries, int draw_entry_count,
 }
 
 static void DrawTerrain(GameData* g, int tileOffsetX, int tileOffsetY, int startOffsetX, int startOffsetY) {
-    for (int y = 0; y < NUM_TILES_X; ++y) {
-        for (int x = 0; x < NUM_TILES_Y; ++x) {
+    for (int y = 0; y < NUM_TILES_Y; ++y) {
+        for (int x = 0; x < NUM_TILES_X; ++x) {
             int rx = x + tileOffsetX;
             int ry = y + tileOffsetY;
             if (rx < 0 || rx >= g->grid->size_x || ry < 0 || ry >= g->grid->size_y) continue;
@@ -117,6 +118,29 @@ static void DrawBuildings(GameData* g, int tileOffsetX, int tileOffsetY, int sta
                 sprite,
                 -startOffsetX + sx * TILE_X,
                 -startOffsetY + sy * TILE_Y - 32, // fix hardcoded offset for buildings tiles
+                kBitmapUnflipped
+            );
+        }
+    }
+}
+
+static void DrawArmies(GameData* g, int tileOffsetX, int tileOffsetY, int startOffsetX, int startOffsetY) {
+    for (int i = 0; i < MAX_ARMIES; ++i) {
+        Army* army = &g->armies[i];
+        if (army->hp <= 0)
+            continue;
+
+        int sx = army->x - tileOffsetX;
+        int sy = army->y - tileOffsetY;
+        if (sx < 0 || sx >= NUM_TILES_X || sy < 0 || sy >= NUM_TILES_Y)
+            continue;
+
+        LCDBitmap* sprite = g->army_sprites[army->type];
+        if (sprite) {
+            pd->graphics->drawBitmap(
+                sprite,
+                -startOffsetX + sx * TILE_X,
+                -startOffsetY + sy * TILE_Y - 32,
                 kBitmapUnflipped
             );
         }
@@ -295,6 +319,7 @@ static void GameUpdateTyped(GameData* g) {
 
     DrawTerrain(g, tileOffsetX, tileOffsetY, startOffsetX, startOffsetY);
     DrawBuildings(g, tileOffsetX, tileOffsetY, startOffsetX, startOffsetY);
+    DrawArmies(g, tileOffsetX, tileOffsetY, startOffsetX, startOffsetY);
 
     pd->graphics->drawBitmap(g->cursor, g->x, g->y, kBitmapUnflipped);
 
@@ -377,6 +402,8 @@ void CreateGameState() {
     // Load building sprites
     for (int i = 0; i < N_BUILDING_TYPES; ++i) 
         g->building_sprites[i] = NULL;
+    for (int i = 0; i < N_ARMY_TYPES; ++i) 
+        g->army_sprites[i] = NULL;
 
     g->building_sprites[BUILDING_CASTLE] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
     g->building_sprites[BUILDING_FARM] = pd->graphics->loadBitmap(IMG_FARM, &err);
@@ -388,6 +415,10 @@ void CreateGameState() {
     g->building_sprites[BUILDING_OUTPOST] = pd->graphics->loadBitmap(IMG_OUTPOST, &err);
     g->building_sprites[BUILDING_ALCHEMIST] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
     g->building_sprites[BUILDING_MINE] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
+
+    g->army_sprites[ARMY_TYPE_INFANTRY] = pd->graphics->loadBitmap(IMG_INFANTRY, &err);
+    g->army_sprites[ARMY_TYPE_ARCHERS] = pd->graphics->loadBitmap(IMG_ARCHERS, &err);
+    g->army_sprites[ARMY_TYPE_CAVALRY] = pd->graphics->loadBitmap(IMG_CAVALRY, &err);
 
     for (int i = 0; i < MAX_SLOTS; ++i) 
         g->slots[i] = (BuildingSlot){ .region_id = 0, .faction_id = 0, .building_type = BUILDING_NONE, .x = 0, .y = 0 };
@@ -423,22 +454,22 @@ void CreateGameState() {
         g->regions[i] = (Region){ .x = 4, .y = 5, .neighbors = {-1, -1, -1, -1} };
 
     // region 0: player
-    g->regions[0] = (Region){ .x = 4, .y = 5, .neighbors = {1, 2, 3, -1} };
+    g->regions[0] = (Region){ .x = 4, .y = 6, .neighbors = {1, 2, 3, -1} };
     // region 1/2: neutral
-    g->regions[1] = (Region){ .x = 4, .y = 10, .neighbors = {0, 2, 3, -1} };
-    g->regions[2] = (Region){ .x = 8, .y = 5, .neighbors = {0, 1, 3, -1} };
+    g->regions[1] = (Region){ .x = 4, .y = 11, .neighbors = {0, 2, 3, -1} };
+    g->regions[2] = (Region){ .x = 8, .y = 6, .neighbors = {0, 1, 3, -1} };
     // region 3: enemy
-    g->regions[3] = (Region){ .x = 8, .y = 10, .neighbors = {0, 1, 2, -1} };
+    g->regions[3] = (Region){ .x = 8, .y = 11, .neighbors = {0, 1, 2, -1} };
 
     // load clean armies
     for (int i = 0; i < MAX_ARMIES; ++i) 
-        g->armies[i] = (Army){ .type = 0, .faction_id = 0, .region_id = 0, .target_region_id = 0, .hp = 0, .slot_index = 0 };
+        g->armies[i] = (Army){ .type = -1, .faction_id = 0, .region_id = 0, .target_region_id = 0, .hp = 0, .slot_index = 0 };
 
-    g->armies[0] = (Army){ .type = 0, .faction_id = 1, .region_id = 0, .target_region_id = 0, .hp = 100, .slot_index = 0 };
-    g->armies[1] = (Army){ .type = 1, .faction_id = 1, .region_id = 0, .target_region_id = 0, .hp = 80,  .slot_index = 1 };
-    g->armies[2] = (Army){ .type = 0, .faction_id = 2, .region_id = 3, .target_region_id = 3, .hp = 90,  .slot_index = 0 };
-    g->armies[3] = (Army){ .type = 1, .faction_id = 2, .region_id = 3, .target_region_id = 3, .hp = 100, .slot_index = 1 };
-    g->armies[4] = (Army){ .type = 0, .faction_id = 0, .region_id = 1, .target_region_id = 1, .hp = 100, .slot_index = 0 };
+    g->armies[0] = (Army){ .type = 0, .faction_id = 1, .region_id = 0, .target_region_id = 0, .hp = 100, .slot_index = 0, .x = 4, .y = 6 };
+    g->armies[1] = (Army){ .type = 1, .faction_id = 1, .region_id = 0, .target_region_id = 0, .hp = 80,  .slot_index = 1, .x = 5, .y = 6 };
+    g->armies[2] = (Army){ .type = 0, .faction_id = 2, .region_id = 3, .target_region_id = 3, .hp = 90,  .slot_index = 0, .x = 8, .y = 11 };
+    g->armies[3] = (Army){ .type = 1, .faction_id = 2, .region_id = 3, .target_region_id = 3, .hp = 100, .slot_index = 1, .x = 9, .y = 11 };
+    g->armies[4] = (Army){ .type = 0, .faction_id = 0, .region_id = 1, .target_region_id = 1, .hp = 100, .slot_index = 0, .x = 4, .y = 11 };
 
 
     // init factions

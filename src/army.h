@@ -2,6 +2,14 @@
 #define MAX_REGIONS 16
 #define REGION_ARMY_SLOTS 9
 #define MAX_REGION_NEIGHBORS 4
+#define ARMY_NONE -1
+
+typedef enum {
+    ARMY_TYPE_INFANTRY,
+    ARMY_TYPE_ARCHERS,
+    ARMY_TYPE_CAVALRY,
+    N_ARMY_TYPES
+} ArmyType;
 
 typedef struct {
     int x, y;              // координаты центра региона (замка)

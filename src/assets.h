@@ -16,6 +16,10 @@
 #define IMG_BARRACKS "images/s_barracks"
 #define IMG_EMPTY_SLOT "images/s_empty_slot"
 
+#define IMG_INFANTRY "images/a_infantry"
+#define IMG_ARCHERS "images/a_archers"
+#define IMG_CAVALRY "images/a_cavalry"
+
 
 #if !defined(MIN)
 #define MIN(a, b) (((a)<(b))?(a):(b))
