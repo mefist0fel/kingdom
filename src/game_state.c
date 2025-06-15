@@ -3,6 +3,8 @@
 #include "grid.h"
 #include "assets.h"
 #include "building_data.h"
+#include "army.h"
+#include "draw_entry.h"
 
 #ifdef _WINDLL
 __declspec(dllexport)
@@ -11,6 +13,7 @@ __declspec(dllexport)
 extern void CreateMenuState();
 
 #define MAX_SLOTS 64
+#define MAX_DRAW_ENTRIES (MAX_ARMIES + MAX_SLOTS)
 
 #define CANVAS_X 400
 #define CANVAS_Y 240
@@ -18,7 +21,7 @@ extern void CreateMenuState();
 #define TILE_Y 32
 
 #define NUM_TILES_X ((CANVAS_X / TILE_X) + 1)
-#define NUM_TILES_Y ((CANVAS_Y / TILE_Y) + 1)
+#define NUM_TILES_Y ((CANVAS_Y / TILE_Y) + 2)
 
 #define CURSOR_X 32
 #define CURSOR_Y 32
@@ -37,6 +40,9 @@ typedef struct {
     Grid* grid;
     BuildingSlot slots[MAX_SLOTS];
     FactionData factions[6]; // 0 - neutral / 1 - player / 2-5 - enemies
+    Army armies[MAX_ARMIES];
+    Region regions[MAX_REGIONS];
+    DrawEntry draw_entries[MAX_DRAW_ENTRIES];
 
     // Map offset
     int offset_x;
@@ -57,6 +63,29 @@ typedef struct {
     LCDBitmap* building_sprites[N_BUILDING_TYPES];
 } GameData;
 
+
+void UpdateDrawEntries(DrawEntry* draw_entries, int draw_entry_count, 
+                       BuildingSlot* slots, Army* armies) {
+    for (int i = 0; i < draw_entry_count; ++i) {
+        DrawEntry* entry = &draw_entries[i];
+
+        if (entry->sprite == NULL || entry->sprite_type == DRAW_TYPE_NONE)
+            continue;
+
+        if (entry->sprite_type == DRAW_TYPE_BUILDING) {
+            BuildingSlot* s = &slots[entry->handle];
+            entry->x = s->x * TILE_X + entry->offset_x;
+            entry->y = s->y * TILE_Y + entry->offset_y;
+            entry->faction_id = s->faction_id;
+        }
+        else if (entry->sprite_type == DRAW_TYPE_ARMY) {
+            Army* a = &armies[entry->handle];
+            entry->x = a->x + entry->offset_x;
+            entry->y = a->y + entry->offset_y;
+            entry->faction_id = a->faction_id;
+        }
+    }
+}
 
 static void DrawTerrain(GameData* g, int tileOffsetX, int tileOffsetY, int startOffsetX, int startOffsetY) {
     for (int y = 0; y < NUM_TILES_X; ++y) {
@@ -360,7 +389,9 @@ void CreateGameState() {
     g->building_sprites[BUILDING_ALCHEMIST] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
     g->building_sprites[BUILDING_MINE] = pd->graphics->loadBitmap(IMG_CASTLE, &err);
 
-    // TODO add default buildings init
+    for (int i = 0; i < MAX_SLOTS; ++i) 
+        g->slots[i] = (BuildingSlot){ .region_id = 0, .faction_id = 0, .building_type = BUILDING_NONE, .x = 0, .y = 0 };
+
     g->slots[0] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_CASTLE, .x = 4, .y = 5 };
     g->slots[1] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_EMPTY, .x = 3, .y = 4 };
     g->slots[2] = (BuildingSlot){ .region_id = 0, .faction_id = 1, .building_type = BUILDING_EMPTY, .x = 3, .y = 5 };
@@ -385,9 +416,33 @@ void CreateGameState() {
     g->slots[18] = (BuildingSlot){ .region_id = 3, .faction_id = 2, .building_type = BUILDING_EMPTY, .x = 9, .y = 9 };
     g->slots[19] = (BuildingSlot){ .region_id = 3, .faction_id = 2, .building_type = BUILDING_EMPTY, .x = 9, .y = 10 };
 
-    // SortBuildingsByY(g->slots, MAX_SLOTS);
+    SortBuildingsByY(g->slots, MAX_SLOTS);
+
+    // regions
+    for (int i = 0; i < MAX_REGIONS; ++i) 
+        g->regions[i] = (Region){ .x = 4, .y = 5, .neighbors = {-1, -1, -1, -1} };
+
+    // region 0: player
+    g->regions[0] = (Region){ .x = 4, .y = 5, .neighbors = {1, 2, 3, -1} };
+    // region 1/2: neutral
+    g->regions[1] = (Region){ .x = 4, .y = 10, .neighbors = {0, 2, 3, -1} };
+    g->regions[2] = (Region){ .x = 8, .y = 5, .neighbors = {0, 1, 3, -1} };
+    // region 3: enemy
+    g->regions[3] = (Region){ .x = 8, .y = 10, .neighbors = {0, 1, 2, -1} };
+
+    // load clean armies
+    for (int i = 0; i < MAX_ARMIES; ++i) 
+        g->armies[i] = (Army){ .type = 0, .faction_id = 0, .region_id = 0, .target_region_id = 0, .hp = 0, .slot_index = 0 };
+
+    g->armies[0] = (Army){ .type = 0, .faction_id = 1, .region_id = 0, .target_region_id = 0, .hp = 100, .slot_index = 0 };
+    g->armies[1] = (Army){ .type = 1, .faction_id = 1, .region_id = 0, .target_region_id = 0, .hp = 80,  .slot_index = 1 };
+    g->armies[2] = (Army){ .type = 0, .faction_id = 2, .region_id = 3, .target_region_id = 3, .hp = 90,  .slot_index = 0 };
+    g->armies[3] = (Army){ .type = 1, .faction_id = 2, .region_id = 3, .target_region_id = 3, .hp = 100, .slot_index = 1 };
+    g->armies[4] = (Army){ .type = 0, .faction_id = 0, .region_id = 1, .target_region_id = 1, .hp = 100, .slot_index = 0 };
+
 
     // init factions
+    // Player faction
     FactionData* player = &g->factions[FACTION_PLAYER];
     player->resources[RESOURCE_GOLD] = 100;
     player->resources[RESOURCE_GOLD_INCOME] = 1;
@@ -395,7 +450,7 @@ void CreateGameState() {
     player->resources[RESOURCE_MANA_INCOME] = 0;
     player->resources[RESOURCE_FOOD] = 2;
 
-    // Враг (фракция 2)
+    // Enemy (faction 2)
     FactionData* enemy = &g->factions[FACTION_ENEMY];
     enemy->resources[RESOURCE_GOLD] = 100;
     enemy->resources[RESOURCE_GOLD_INCOME] = 0;
